@@ -1,0 +1,53 @@
+---
+title: "Solomon Islands"
+author: "Yingmai Chen"
+date: "2023-12-16"
+output: html_document
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r echo=FALSE}
+library(shiny)
+library(leaflet)
+library(sf)
+
+```
+
+# – Map of the island state
+```{r echo=FALSE,message=FALSE,warning=FALSE}
+solomon_islands <- st_read("solomon islands.geojson")
+```
+
+```{r echo=FALSE}
+ui <- fluidPage(
+    titlePanel("Map of the Solomon Islands"),
+    leafletOutput("map")
+)
+
+server <- function(input, output) {
+    output$map <- renderLeaflet({
+        leaflet(data = solomon_islands) %>%
+            addTiles() %>%
+            addPolygons()
+    })
+}
+
+shinyApp(ui = ui, server = server)
+```
+First,I create a map to show the geographical position of the solomon islands.I frame its position in blue.
+
+```{r}
+##'jasd[a
+##'adjp
+##'
+##'daks[p
+##'adksp[k
+##'kads[k
+##'kadp[
+##'kadp]]]]]
+```
+
