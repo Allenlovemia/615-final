@@ -14,16 +14,37 @@ knitr::opts_chunk$set(echo = TRUE)
 library(shiny)
 library(leaflet)
 library(sf)
+library(ggplot2)
 
 ```
-```{r echo=FALSE,message=FALSE,warning=FALSE}
+```{r echo=FALSE,message=FALSE,warning=FALSE,include=FALSE}
 solomon_islands <- st_read("solomon islands.geojson")
 ```
 
 ```{r echo=FALSE,warning=FALSE}
 ui <- fluidPage(
-    titlePanel("Map of the Solomon Islands"),
-    leafletOutput("map")
+    titlePanel("Map and Information of the Solomon Islands"),
+    
+    leafletOutput("map"),
+
+    fluidRow(
+        column(4, wellPanel(
+            h4("Location"),
+            "Southwestern Pacific Ocean"
+        )),
+        column(4, wellPanel(
+            h4("Major Islands"),
+            "6 major and over 900 smaller islands"
+        )),
+        column(4, wellPanel(
+            h4("Capital"),
+            "Honiara, located on Guadalcanal"
+        )),
+        column(4, wellPanel(
+            h4("Area"),
+            "Approximately 29,000 square kilometers"
+        ))
+    )
 )
 
 server <- function(input, output) {
@@ -35,52 +56,73 @@ server <- function(input, output) {
 }
 
 shinyApp(ui = ui, server = server)
+
 ```
 First,I create a map to show the geographical position of the solomon islands.I frame its position in blue.data is from
 (https://github.com/glynnbird/countriesgeojson/blob/master/solomon%20islands.geojson)
-
 ```{r echo=FALSE}
+
+
+
+solomon_data <- data.frame(
+  year = c(1568, 1886, 1893, 1942, 1978, 1998),
+  event = c("First European contact by Álvaro de Mendaña", 
+            "British-German Agreement", 
+            "British Protectorate established", 
+            "World War II", 
+            "Independence from UK", 
+            "Ethnic tensions and civil war"),
+  category = c("Exploration", "Colonialism", "Colonialism", "War", "Independence", "Conflict")
+)
+
+
 ui <- fluidPage(
-    titlePanel("Key Facts About the Solomon Islands"),
+    titlePanel("Key facts about the Solomon Islands"),
     sidebarLayout(
         sidebarPanel(
-            checkboxGroupInput("factsToShow", "Select Facts to Show", 
-                               choices = c("Location", "Major Islands", "Capital", "Area", "Population", "Language", "Independence"))
+            sliderInput("yearRange", 
+                        "Select Year Range:",
+                        min = 1550, 
+                        max = 2020, 
+                        value = c(1550, 2020),
+                        step = 10)
         ),
         mainPanel(
-            uiOutput("selectedFacts")
+           plotOutput("timelinePlot")
         )
     )
 )
-
 server <- function(input, output) {
-    output$selectedFacts <- renderUI({
-        facts <- list(
-            Location = "Southwestern Pacific Ocean",
-            `Major Islands` = "6 major and over 900 smaller islands",
-            Capital = "Honiara, located on Guadalcanal",
-            Area = "Approximately 29,000 square kilometers",
-            Population = "About 700,000",
-            Language = "English, Pijin",
-            Independence = "Obtained from the United Kingdom in 1978"
-        )
-        
-        selectedFacts <- lapply(input$factsToShow, function(fact) {
-            wellPanel(
-                h4(fact),
-                p(facts[[fact]])
-            )
-        })
-        
-        do.call(tagList, selectedFacts)
+    output$timelinePlot <- renderPlot({
+        filtered_data <- solomon_data[solomon_data$year >= input$yearRange[1] & solomon_data$year <= input$yearRange[2], ]
+     
+        filtered_data$period <- cut(filtered_data$year,
+                                    breaks = c(1550, 1886, 1978, 2020),
+                                    labels = c("Arrival of Europeans", "Colonial Period", "Independence Era"),
+                                    include.lowest = TRUE)
+
+        ggplot(filtered_data, aes(x = year, y = category, label = event, color = period)) +
+            geom_point(size = 4) +
+            geom_text(vjust = 2, angle = 45, hjust = 1, size = 4) +
+            scale_x_continuous(breaks = filtered_data$year) +
+            scale_color_manual(values = c("red", "black", "blue")) +
+            theme_minimal() +
+            labs(title = "Key Events in Solomon Islands' History", x = "Year", y = "Category") +
+            theme(axis.text.y = element_blank(),
+                  plot.title = element_text(hjust = 0.5),
+                  panel.background = element_rect(fill = "lightblue"),
+                  panel.grid.major = element_line(color = "white"),
+                  panel.grid.minor = element_line(color = "white"),
+                  legend.position = "bottom")
     })
 }
 
 shinyApp(ui = ui, server = server)
 
-
 ```
-
 Then I show some key features for the solomon islands.Data(https://en.wikipedia.org/wiki/Solomon_Islands)
+
+Description:The Solomon Islands, located in the southwestern Pacific Ocean, is an archipelago nation comprising six major islands and over 900 smaller ones. It's part of Melanesia in Oceania, northeast of Australia. The islands have a rich history, first settled around 30,000 BC. They gained independence from the United Kingdom in 1978. The capital, Honiara, is on Guadalcanal, the largest island. The Solomon Islands are known for their diverse cultures, languages, and a vibrant ecosystem, including rainforests and coral reefs.
+
 
 
