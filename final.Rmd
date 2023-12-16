@@ -1,10 +1,10 @@
 ---
 title: "Solomon Islands"
 author: "Yingmai Chen"
-date: "2023-12-16"
 output: html_document
 runtime: shiny
 ---
+
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -16,13 +16,11 @@ library(leaflet)
 library(sf)
 
 ```
-
-# – Map of the island state
 ```{r echo=FALSE,message=FALSE,warning=FALSE}
 solomon_islands <- st_read("solomon islands.geojson")
 ```
 
-```{r echo=FALSE}
+```{r echo=FALSE,warning=FALSE}
 ui <- fluidPage(
     titlePanel("Map of the Solomon Islands"),
     leafletOutput("map")
@@ -38,16 +36,51 @@ server <- function(input, output) {
 
 shinyApp(ui = ui, server = server)
 ```
-First,I create a map to show the geographical position of the solomon islands.I frame its position in blue.
+First,I create a map to show the geographical position of the solomon islands.I frame its position in blue.data is from
+(https://github.com/glynnbird/countriesgeojson/blob/master/solomon%20islands.geojson)
 
-```{r}
-##'jasd[a
-##'adjp
-##'
-##'daks[p
-##'adksp[k
-##'kads[k
-##'kadp[
-##'kadp]]]]]
+```{r echo=FALSE}
+ui <- fluidPage(
+    titlePanel("Key Facts About the Solomon Islands"),
+    sidebarLayout(
+        sidebarPanel(
+            checkboxGroupInput("factsToShow", "Select Facts to Show", 
+                               choices = c("Location", "Major Islands", "Capital", "Area", "Population", "Language", "Independence"))
+        ),
+        mainPanel(
+            uiOutput("selectedFacts")
+        )
+    )
+)
+
+server <- function(input, output) {
+    output$selectedFacts <- renderUI({
+        facts <- list(
+            Location = "Southwestern Pacific Ocean",
+            `Major Islands` = "6 major and over 900 smaller islands",
+            Capital = "Honiara, located on Guadalcanal",
+            Area = "Approximately 29,000 square kilometers",
+            Population = "About 700,000",
+            Language = "English, Pijin",
+            Independence = "Obtained from the United Kingdom in 1978"
+        )
+        
+        selectedFacts <- lapply(input$factsToShow, function(fact) {
+            wellPanel(
+                h4(fact),
+                p(facts[[fact]])
+            )
+        })
+        
+        do.call(tagList, selectedFacts)
+    })
+}
+
+shinyApp(ui = ui, server = server)
+
+
 ```
+
+Then I show some key features for the solomon islands.Data(https://en.wikipedia.org/wiki/Solomon_Islands)
+
 
