@@ -10,6 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r echo=FALSE,include=FALSE}
+
 library(shiny)
 library(leaflet)
 library(sf)
@@ -18,6 +19,9 @@ library(DT)
 library(jsonlite)
 library(tidyverse)
 library(plotly)
+library(tidyr)
+library(reshape2)
+library(scales)
 ```
 
 ```{r echo=FALSE,message=FALSE,warning=FALSE,include=FALSE}
@@ -195,7 +199,7 @@ server <- function(input, output) {
     data_to_plot <- solomon_islands_data %>%
       select(Province, Population = all_of(year_col))
 ggplot(data_to_plot, aes(x = Province, y = Population, fill = Province)) +
-  geom_bar(stat = "identity", color = "black", size = 0.5) +  # Adds a border to the bars
+  geom_bar(stat = "identity", color = "black", size = 0.5) +  
   theme_minimal(base_size = 14) +  # Uses a minimal theme with larger base font size
   theme(
     axis.text.x = element_text(angle = 45, hjust = 1, size = 12, face = "bold"), # Bolder, larger x-axis labels
@@ -274,36 +278,133 @@ server <- function(input, output) {
 
 # Run the application 
 shinyApp(ui = ui, server = server)
+```
+```{r echo=FALSE,warning=FALSE}
+
+gdp_data <- read.csv("GDP.csv")
+gdp_long <- melt(gdp_data, id.vars = "Country.Name", variable.name = "Year", value.name = "GDP")
+gdp_long$Year <- as.numeric(gdp_long$Year)+1969
+
+ui <- fluidPage(
+  titlePanel("Per capita GDP of Solomon Islands VS Papua New Guinea "),
+  sidebarLayout(
+    sidebarPanel(
+      sliderInput("yearRange",
+                  "Select Year Range:",
+                  min = min(gdp_long$Year),
+                  max = max(gdp_long$Year),
+                  value = c(min(gdp_long$Year), max(gdp_long$Year)+1969),
+                  step = 1,
+                  ticks = TRUE,  # Add ticks to the slider
+                  animate = TRUE  # Optional: add animation for the slider
+      )
+    ),
+    mainPanel(
+      plotOutput("gdpPlot")
+    )
+  )
+)
+
+server <- function(input, output) {
+  output$gdpPlot <- renderPlot({
+    filtered_data <- subset(gdp_long, Year >= input$yearRange[1] & Year <= input$yearRange[2])
+    ggplot(filtered_data, aes(x = Year, y = GDP, group = Country.Name, color = Country.Name)) +
+      geom_line() +
+      geom_point() +  
+      scale_color_brewer(palette = "Set1") +  
+      theme_minimal() +
+      labs(title = "GDP Over Time", x = "Year", y = "GDP (USD)") +
+      scale_y_continuous(labels = scales::dollar)  
+  })
+}
+
+shinyApp(ui, server)
+
+
 
 ```
 
+I make a table about the five differences between the  Melanesian Islands,and I also make a plot for Per capita GDP of Solomon Islands VS Papua New Guinea,for the table part,there has specific illustration of the data,so I don't make explaination.
+
+For the plot,General Trend: Both countries show an overall increasing trend in GDP from 1970 to around 2020, indicating economic growth over this 50-year period.
+
+Volatility: There are periods of volatility where the GDP fluctuates more significantly, such as around 1990 for Papua New Guinea and the early 2000s for both countries. This could be due to external economic shocks, changes in government policies, commodity price fluctuations (particularly if their economies are dependent on a few key exports), or other socio-economic factors.
+
+Growth Rates: While both countries follow a generally similar pattern, there are times when their growth rates diverge. For instance, between 2000 and 2010, the Solomon Islands' GDP appears to grow at a steadier rate compared to Papua New Guinea, which experiences more pronounced ups and downs.
+
+Recent Trends: In the most recent years shown on the chart (around 2020), there's a sharp downturn for both countries, possibly reflecting the impact of the COVID-19 pandemic on their economies.
+
+Comparison: Throughout the entire time period, Papua New Guinea's GDP remains higher than that of the Solomon Islands. However, the gap in GDP between the two countries seems to narrow as time progresses, especially during the period from 2000 to 2020.
+
 # SWOT analysis
-```{r}
-ui <- fluidPage(
-    titlePanel("Solomon Islands GDP Composition(2011)"),
-    plotlyOutput("gdpPieChart")
+```{r echo=FALSE}
+
+
+# Create data for each SWOT category
+swot_data <- list(
+  Strengths = data.frame(
+    Aspect = c("Natural Resources", "Biodiversity", "Cultural Heritage", "Agricultural Potential", "Renewable Energy Resources"),
+    Description = c(
+      "Rich in natural resources, including forests, minerals, and fisheries, which can be leveraged for economic growth.",
+      "High biodiversity with potential for eco-tourism and conservation projects.",
+      "Strong cultural heritage and diversity can be attractive to tourists.",
+      "Fertile land that is suitable for various types of agriculture.",
+      "Potential for the development of renewable energy sources like hydro, solar, and wind."
+    )
+  ),
+  Weaknesses = data.frame(
+    Aspect = c("Geographic Dispersion", "Economic Dependency", "Limited Industrial Base", "Infrastructure Deficits", "Challenges in Public Services"),
+    Description = c(
+      "The country consists of many islands, which makes infrastructure development and governance challenging.",
+      "Heavy reliance on a few key sectors, such as logging and fisheries, makes the economy vulnerable to shocks.",
+      "Lack of diversification in industry can limit economic opportunities and resilience.",
+      "Inadequate infrastructure in terms of transportation, utilities, and communication.",
+      "Education, healthcare, and other public services may be underdeveloped, affecting human capital development."
+    )
+  ),
+  Opportunities = data.frame(
+    Aspect = c("Tourism Development", "Foreign Investment", "Trade Partnerships", "Sustainable Practices", "Regional Cooperation"),
+    Description = c(
+      "Potential to expand the tourism industry, especially eco-tourism and cultural tourism.",
+      "Attracting foreign direct investment for resource development and infrastructure.",
+      "Forming trade partnerships with other nations to expand market access for Solomon Islands products.",
+      "Opportunity to develop sustainable fishing and logging practices.",
+      "Engaging in regional cooperation for economic development and stability."
+    )
+  ),
+  Threats = data.frame(
+    Aspect = c("Climate Change", "Over-reliance on Imports", "Political Instability", "Global Market Fluctuations", "Environmental Degradation"),
+    Description = c(
+      "Vulnerability to climate change and natural disasters, which can disrupt the economy and livelihoods.",
+      "Dependence on imported goods for many basic necessities can be problematic if supply chains are disrupted.",
+      "Risk of political instability that can deter investment and development.",
+      "Prices for key export commodities can be volatile on the global market.",
+      "Unsustainable exploitation of natural resources could lead to long-term environmental damage."
+    )
+  )
 )
 
-# Define server logic to draw the pie chart
-server <- function(input, output) {
-    output$gdpPieChart <- renderPlotly({
-        # Data for the pie chart
-        sectors <- c("Agriculture", "Industry", "Services")
-        percentages <- c(37.7, 6.4, 55.9)
-        colors <- c('#FF9999', '#66B2FF', '#99CC99')  # Custom color palette
+# Define UI
+ui <- fluidPage(
+  titlePanel("SWOT Analysis of Solomon Islands"),
+  tabsetPanel(
+    tabPanel("Strengths", DTOutput("strengthsTable")),
+    tabPanel("Weaknesses", DTOutput("weaknessesTable")),
+    tabPanel("Opportunities", DTOutput("opportunitiesTable")),
+    tabPanel("Threats", DTOutput("threatsTable"))
+  )
+)
 
-        # Create the pie chart
-        plot_ly(labels = sectors, values = percentages, type = 'pie',
-                textinfo = 'label+percent',
-                insidetextorientation = 'radial', marker = list(colors = colors),
-                hoverinfo = 'label+percent+name') %>%
-            layout(
-                   legend = list(x = 1, y = 0.5),
-                   titlefont = list(size = 20))
-    })
+# Define server logic
+server <- function(input, output) {
+  output$strengthsTable <- renderDataTable({datatable(swot_data$Strengths)})
+  output$weaknessesTable <- renderDataTable({datatable(swot_data$Weaknesses)})
+  output$opportunitiesTable <- renderDataTable({datatable(swot_data$Opportunities)})
+  output$threatsTable <- renderDataTable({datatable(swot_data$Threats)})
 }
 
-# Run the application
-shinyApp(ui = ui, server = server)
+# Run the app
+shinyApp(ui, server)
+
 ```
 

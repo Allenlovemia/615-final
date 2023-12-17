@@ -8,3 +8,5 @@ appId: 10813394
 bundleId:
 url: https://allenloveqingqing.shinyapps.io/final/
 version: 1
+asMultiple: FALSE
+asStatic: FALSE
