@@ -6,6 +6,9 @@ library(DT)
 library(jsonlite)
 library(tidyverse)
 library(plotly)
+library(tidyr)
+library(reshape2)
+library(scales)
 library(rsconnect)
 
 solomon_islands <- st_read("solomon islands.geojson")
@@ -68,65 +71,67 @@ solomon_islands_data <- data.frame(
   Population_2022 = c(33476, 38453, 166838, 36688, 57396, 163085, 4465, 25701, 102083)
 )
 
+gdp_data <- read.csv("GDP.csv")
+gdp_long <- melt(gdp_data, id.vars = "Country.Name", variable.name = "Year", value.name = "GDP")
+gdp_long$Year <- as.numeric(gdp_long$Year)+1969
 
-
-
+swot_data <- list(
+  Strengths = data.frame(
+    Aspect = c("Natural Resources", "Biodiversity", "Cultural Heritage", "Agricultural Potential", "Renewable Energy Resources"),
+    Description = c(
+      "Rich in natural resources, including forests, minerals, and fisheries, which can be leveraged for economic growth.",
+      "High biodiversity with potential for eco-tourism and conservation projects.",
+      "Strong cultural heritage and diversity can be attractive to tourists.",
+      "Fertile land that is suitable for various types of agriculture.",
+      "Potential for the development of renewable energy sources like hydro, solar, and wind."
+    )
+  ),
+  Weaknesses = data.frame(
+    Aspect = c("Geographic Dispersion", "Economic Dependency", "Limited Industrial Base", "Infrastructure Deficits", "Challenges in Public Services"),
+    Description = c(
+      "The country consists of many islands, which makes infrastructure development and governance challenging.",
+      "Heavy reliance on a few key sectors, such as logging and fisheries, makes the economy vulnerable to shocks.",
+      "Lack of diversification in industry can limit economic opportunities and resilience.",
+      "Inadequate infrastructure in terms of transportation, utilities, and communication.",
+      "Education, healthcare, and other public services may be underdeveloped, affecting human capital development."
+    )
+  ),
+  Opportunities = data.frame(
+    Aspect = c("Tourism Development", "Foreign Investment", "Trade Partnerships", "Sustainable Practices", "Regional Cooperation"),
+    Description = c(
+      "Potential to expand the tourism industry, especially eco-tourism and cultural tourism.",
+      "Attracting foreign direct investment for resource development and infrastructure.",
+      "Forming trade partnerships with other nations to expand market access for Solomon Islands products.",
+      "Opportunity to develop sustainable fishing and logging practices.",
+      "Engaging in regional cooperation for economic development and stability."
+    )
+  ),
+  Threats = data.frame(
+    Aspect = c("Climate Change", "Over-reliance on Imports", "Political Instability", "Global Market Fluctuations", "Environmental Degradation"),
+    Description = c(
+      "Vulnerability to climate change and natural disasters, which can disrupt the economy and livelihoods.",
+      "Dependence on imported goods for many basic necessities can be problematic if supply chains are disrupted.",
+      "Risk of political instability that can deter investment and development.",
+      "Prices for key export commodities can be volatile on the global market.",
+      "Unsustainable exploitation of natural resources could lead to long-term environmental damage."
+    )
+  )
+)
 
 
 
 ui <- fluidPage(
   titlePanel("Solomon Islands Overview"),
   
+  # Use tabsetPanel to create tabs for each section of the app
   tabsetPanel(
-    tabPanel("Map and Information", 
-             leafletOutput("map"),
-             fluidRow(
-               column(4, wellPanel(
-                 h4("Location"),
-                 "Southwestern Pacific Ocean"
-               )),
-               column(4, wellPanel(
-                 h4("Major Islands"),
-                 "6 major and over 900 smaller islands"
-               )),
-               column(4, wellPanel(
-                 h4("Capital"),
-                 "Honiara, located on Guadalcanal"
-               )),
-               column(4, wellPanel(
-                 h4("Area"),
-                 "Approximately 29,000 square kilometers"
-               ))
-             )),
-    
-    tabPanel("Key Facts",
-             sidebarPanel(
-               sliderInput("yearRange", "Select Year Range:",
-                           min = 1550, max = 2020, value = c(1550, 2020), step = 10)
-             ),
-             mainPanel(
-               DTOutput("eventTable"),
-               plotOutput("timelinePlot")
-             )),
-    
-    tabPanel("Demographics",
-             DTOutput("solomon_table"),
-             selectInput("year", "Select Year", choices = c("1999", "2009", "2022")),
-             plotOutput("populationPlot")
-    ),
-    
-    tabPanel("Comparative Analysis",
-             sidebarPanel(
-               selectInput("category", "Select Category:", 
-                           choices = c("Geography", "Culture", "History", "Economy", "Demographics"))
-             ),
-             mainPanel(
-               tableOutput("infoTable")
-             )),
-    
-    tabPanel("Economy",
-             plotlyOutput("gdpPieChart")
-    )
+    tabPanel("Map and Information", leafletOutput("map")),
+    tabPanel("Historical Timeline", sliderInput("yearRange", "Select Year Range:", min = 1550, max = 2020, value = c(1550, 2020), step = 10), DTOutput("eventTable"), plotOutput("timelinePlot")),
+    tabPanel("Key Demographics", DTOutput("solomon_table")),
+    tabPanel("Population Trends", selectInput("year", "Select Year", choices = c("1999", "2009", "2022")), plotOutput("populationPlot")),
+    tabPanel("Comparative Analysis", selectInput("category", "Select Category:", choices = c("Geography", "Culture", "History", "Economy", "Demographics")), tableOutput("infoTable")),
+    tabPanel("GDP Comparison", sliderInput("yearRangeGDP", "Select Year Range:", min = min(gdp_long$Year), max = max(gdp_long$Year), value = c(min(gdp_long$Year), max(gdp_long$Year)), step = 1, ticks = TRUE, animate = TRUE), plotOutput("gdpPlot")),
+    tabPanel("SWOT Analysis", DTOutput("strengthsTable"), DTOutput("weaknessesTable"), DTOutput("opportunitiesTable"), DTOutput("threatsTable"))
   )
 )
 
@@ -201,23 +206,24 @@ server <- function(input, output) {
     filteredData <- data %>% filter(Category == input$category)
     return(filteredData)
   })
-  
-  # Economy rendering
-  output$gdpPieChart <- renderPlotly({
-    # Data for the pie chart
-    sectors <- c("Agriculture", "Industry", "Services")
-    percentages <- c(37.7, 6.4, 55.9)
-    colors <- c('#FF9999', '#66B2FF', '#99CC99')  # Custom color palette
-    
-    # Create the pie chart
-    plot_ly(labels = sectors, values = percentages, type = 'pie',
-            textinfo = 'label+percent',
-            insidetextorientation = 'radial', marker = list(colors = colors),
-            hoverinfo = 'label+percent+name') %>%
-      layout(
-        legend = list(x = 1, y = 0.5),
-        titlefont = list(size = 20))
+
+  output$gdpPlot <- renderPlot({
+    filtered_data <- subset(gdp_long, Year >= input$yearRange[1] & Year <= input$yearRange[2])
+    ggplot(filtered_data, aes(x = Year, y = GDP, group = Country.Name, color = Country.Name)) +
+      geom_line() +
+      geom_point() +  
+      scale_color_brewer(palette = "Set1") +  
+      theme_minimal() +
+      labs(title = "GDP Over Time", x = "Year", y = "GDP (USD)") +
+      scale_y_continuous(labels = scales::dollar)  
   })
+  
+  output$strengthsTable <- renderDataTable({datatable(swot_data$Strengths)})
+  output$weaknessesTable <- renderDataTable({datatable(swot_data$Weaknesses)})
+  output$opportunitiesTable <- renderDataTable({datatable(swot_data$Opportunities)})
+  output$threatsTable <- renderDataTable({datatable(swot_data$Threats)})
+  
+  
 }
 
 # Run the application

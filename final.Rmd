@@ -395,7 +395,6 @@ ui <- fluidPage(
   )
 )
 
-# Define server logic
 server <- function(input, output) {
   output$strengthsTable <- renderDataTable({datatable(swot_data$Strengths)})
   output$weaknessesTable <- renderDataTable({datatable(swot_data$Weaknesses)})
@@ -403,7 +402,6 @@ server <- function(input, output) {
   output$threatsTable <- renderDataTable({datatable(swot_data$Threats)})
 }
 
-# Run the app
 shinyApp(ui, server)
 
 ```
