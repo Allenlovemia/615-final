@@ -6,6 +6,7 @@ library(DT)
 library(jsonlite)
 library(tidyverse)
 library(plotly)
+library(rsconnect)
 
 solomon_islands <- st_read("solomon islands.geojson")
 solomon_data <- data.frame(
@@ -221,4 +222,5 @@ server <- function(input, output) {
 
 # Run the application
 shinyApp(ui = ui, server = server)
+
 
