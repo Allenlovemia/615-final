@@ -17,6 +17,7 @@ library(ggplot2)
 library(DT)
 library(jsonlite)
 library(tidyverse)
+library(plotly)
 ```
 
 ```{r echo=FALSE,message=FALSE,warning=FALSE,include=FALSE}
@@ -64,9 +65,11 @@ shinyApp(ui = ui, server = server)
 First,I create a map to show the geographical position of the solomon islands.I frame its position in blue and I also list some information below the image.data is from (<https://github.com/glynnbird/countriesgeojson/blob/master/solomon%20islands.geojson>)
 
 ```{r echo=FALSE}
+library(shiny)
+library(ggplot2)
+library(DT)
 
-
-
+# Your existing data
 solomon_data <- data.frame(
   year = c(1568, 1886, 1893, 1942, 1978, 1998),
   event = c("First European contact by Álvaro de Mendaña", 
@@ -78,9 +81,9 @@ solomon_data <- data.frame(
   category = c("Exploration", "Colonialism", "Colonialism", "War", "Independence", "Conflict")
 )
 
-
+# UI
 ui <- fluidPage(
-    titlePanel("Key facts about the Solomon Islands"),
+    titlePanel("Key Facts About the Solomon Islands"),
     sidebarLayout(
         sidebarPanel(
             sliderInput("yearRange", 
@@ -91,11 +94,21 @@ ui <- fluidPage(
                         step = 10)
         ),
         mainPanel(
+           DTOutput("eventTable"),
            plotOutput("timelinePlot")
         )
     )
 )
+
+# Server
 server <- function(input, output) {
+    # For the table
+    output$eventTable <- renderDT({  
+        filtered_data <- solomon_data[solomon_data$year >= input$yearRange[1] & solomon_data$year <= input$yearRange[2], ]
+        datatable(filtered_data, options = list(pageLength = 5))
+    })
+
+    # For the plot
     output$timelinePlot <- renderPlot({
         filtered_data <- solomon_data[solomon_data$year >= input$yearRange[1] & solomon_data$year <= input$yearRange[2], ]
      
@@ -120,6 +133,7 @@ server <- function(input, output) {
     })
 }
 
+# Run the application
 shinyApp(ui = ui, server = server)
 
 ```
@@ -183,13 +197,16 @@ ggplot(data_to_plot, aes(x = Province, y = Population, fill = Province)) +
     plot.title = element_text(size = 16, face = "bold", hjust = 0.5) # Bolder and centered plot title
   ) +
   labs(y = "Population", x = "Province", title = paste("Population of Solomon Islands Provinces in", input$year)) +
-  scale_fill_brewer(palette = "Paired")  # Adds a color palette
+  scale_fill_brewer(palette = "Paired")  
 
   })
 }
 
 shinyApp(ui = ui, server = server)
 ```
+
+We can see from the Solomon Islands that the population of key provinces has increased significantly in both periods, 1999-2009, 2009-2022.
+
 
 
 
