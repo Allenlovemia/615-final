@@ -5,18 +5,20 @@ output: html_document
 runtime: shiny
 ---
 
-
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r echo=FALSE}
+```{r echo=FALSE,include=FALSE}
 library(shiny)
 library(leaflet)
 library(sf)
 library(ggplot2)
-
+library(DT)
+library(jsonlite)
+library(tidyverse)
 ```
+
 ```{r echo=FALSE,message=FALSE,warning=FALSE,include=FALSE}
 solomon_islands <- st_read("solomon islands.geojson")
 ```
@@ -58,8 +60,9 @@ server <- function(input, output) {
 shinyApp(ui = ui, server = server)
 
 ```
-First,I create a map to show the geographical position of the solomon islands.I frame its position in blue.data is from
-(https://github.com/glynnbird/countriesgeojson/blob/master/solomon%20islands.geojson)
+
+First,I create a map to show the geographical position of the solomon islands.I frame its position in blue and I also list some information below the image.data is from (<https://github.com/glynnbird/countriesgeojson/blob/master/solomon%20islands.geojson>)
+
 ```{r echo=FALSE}
 
 
@@ -120,9 +123,77 @@ server <- function(input, output) {
 shinyApp(ui = ui, server = server)
 
 ```
-Then I show some key features for the solomon islands.Data(https://en.wikipedia.org/wiki/Solomon_Islands)
+
+Then I show some key features for the solomon islands.Data(<https://en.wikipedia.org/wiki/Solomon_Islands>)
 
 Description:The Solomon Islands, located in the southwestern Pacific Ocean, is an archipelago nation comprising six major islands and over 900 smaller ones. It's part of Melanesia in Oceania, northeast of Australia. The islands have a rich history, first settled around 30,000 BC. They gained independence from the United Kingdom in 1978. The capital, Honiara, is on Guadalcanal, the largest island. The Solomon Islands are known for their diverse cultures, languages, and a vibrant ecosystem, including rainforests and coral reefs.
+
+# Key demographics
+
+```{r echo=FALSE}
+solomon_islands_data <- data.frame(
+  Number = 1:9,
+  Province = c("Central Province", "Choiseul Province", "Guadalcanal Province", "Isabel Province", "Makira-Ulawa Province", "Malaita Province", "Rennell and Bellona Province", "Temotu Province", "Western Province"),
+  Capital = c("Tulagi", "Taro Island", "Honiara", "Buala", "Kirakira", "Auki", "Tigoa", "Lata", "Gizo"),
+  Premier = c("Stanely Manetiva", "Harrison Benjamin", "Anthony Veke", "Lesley Kikolo", "Julian Maka'a", "Martin Fini", "Japhet Tuhanuku", "Clay Forau", "David Gina"),
+  Area = c(615, 3837, 5336, 4136, 3188, 4225, 671, 895, 5475),
+  Population_1999 = c(21577, 20008, 60275, 20421, 31006, 122620, 2377, 18912, 62739),
+  Population_per_km2_2009 = c(42.4, 6.9, 17.5, 6.3, 12.7, 32.6, 4.5, 23.9, 14.0),
+  Population_2009 = c(26051, 26371, 93613, 26158, 40419, 137596, 3041, 21362, 76649),
+  Population_2022 = c(33476, 38453, 166838, 36688, 57396, 163085, 4465, 25701, 102083)
+)
+
+ui <- fluidPage(
+  DTOutput("solomon_table")
+)
+
+server <- function(input, output) {
+  output$solomon_table <- renderDT({
+    datatable(solomon_islands_data, options = list(
+      autoWidth = TRUE,
+      columnDefs = list(list(width = '200px', targets = "_all"))
+    ))
+  })
+}
+
+shinyApp(ui = ui, server = server)
+
+```
+
+```{r echo=FALSE}
+ui <- fluidPage(
+  titlePanel("Population of Solomon Islands Provinces"),
+  selectInput("year", "Select Year", choices = c("1999", "2009", "2022")),
+  plotOutput("populationPlot")
+)
+
+
+server <- function(input, output) {
+  output$populationPlot <- renderPlot({
+    year_col <- paste0("Population_", input$year)
+    data_to_plot <- solomon_islands_data %>%
+      select(Province, Population = all_of(year_col))
+ggplot(data_to_plot, aes(x = Province, y = Population, fill = Province)) +
+  geom_bar(stat = "identity", color = "black", size = 0.5) +  # Adds a border to the bars
+  theme_minimal(base_size = 14) +  # Uses a minimal theme with larger base font size
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 12, face = "bold"), # Bolder, larger x-axis labels
+    axis.text.y = element_text(size = 12, face = "bold"), # Bolder y-axis labels
+    axis.title = element_text(size = 14, face = "bold"), # Bolder axis titles
+    plot.title = element_text(size = 16, face = "bold", hjust = 0.5) # Bolder and centered plot title
+  ) +
+  labs(y = "Population", x = "Province", title = paste("Population of Solomon Islands Provinces in", input$year)) +
+  scale_fill_brewer(palette = "Paired")  # Adds a color palette
+
+  })
+}
+
+shinyApp(ui = ui, server = server)
+```
+
+
+
+
 
 
 
